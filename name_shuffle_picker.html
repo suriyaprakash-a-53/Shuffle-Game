@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pick a Box</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1e1f26;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  .wrap {
+    width: 100%;
+    max-width: 520px;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  h1 {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 24px;
+  }
+  .controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 28px;
+  }
+  button {
+    font-size: 15px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: #4f6bff;
+    color: #fff;
+  }
+  button:hover { background: #3d55e0; }
+  button.secondary { background: #383a45; color: #ddd; }
+  button.secondary:hover { background: #46485a; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .confetti {
+    position: fixed;
+    top: -10px;
+    z-index: 999;
+    border-radius: 2px;
+    animation-name: confetti-fall;
+    animation-timing-function: ease-in;
+    animation-fill-mode: forwards;
+    pointer-events: none;
+  }
+  @keyframes confetti-fall {
+    0% { top: -10px; opacity: 1; }
+    100% { top: 100vh; opacity: 0.3; }
+  }
+  .box {
+    aspect-ratio: 1;
+    background: #2c2e3a;
+    border: 2px solid #444657;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .box:hover { transform: translateY(-3px); border-color: #4f6bff; }
+  .box.revealed {
+    background: #4f6bff;
+    border-color: #4f6bff;
+    cursor: default;
+    transform: none;
+    font-size: 15px;
+    padding: 4px;
+    text-align: center;
+  }
+  .box.locked {
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  #status {
+    color: #b7b9c8;
+    font-size: 14px;
+    margin-top: 22px;
+  }
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .box { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pick a box</h1>
+  <div class="controls">
+    <button id="shuffleBtn">Shuffle</button>
+    <button id="resetBtn" class="secondary">Reset</button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p id="status">Shuffle, then pick a box.</p>
+</div>
+
+<script>
+  const boxCount = 6;
+  const primaryNames = ["Ashmita", "Vasanth"];
+  const primaryWeights = [0.6, 0.4];
+  const otherNames = ["Lanush", "Thiyagu", "Lagil", "Gokul"];
+  let revealed = false;
+
+  function pickWeighted() {
+    const r = Math.random();
+    return r < primaryWeights[0] ? primaryNames[0] : primaryNames[1];
+  }
+
+  function launchConfetti() {
+    const colors = ['#4f6bff', '#ff6b6b', '#ffd166', '#06d6a0', '#c77dff'];
+    for (let i = 0; i < 120; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti';
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+      piece.style.animationDelay = (Math.random() * 0.3) + 's';
+      piece.style.width = piece.style.height = (6 + Math.random() * 6) + 'px';
+      piece.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
+      document.body.appendChild(piece);
+      setTimeout(() => piece.remove(), 4000);
+    }
+  }
+
+  const grid = document.getElementById('grid');
+  const status = document.getElementById('status');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const resetBtn = document.getElementById('resetBtn');
+
+  function render() {
+    grid.innerHTML = '';
+    for (let i = 1; i <= boxCount; i++) {
+      const box = document.createElement('div');
+      box.className = 'box';
+      box.textContent = i;
+      box.addEventListener('click', () => pick(box));
+      grid.appendChild(box);
+    }
+  }
+
+  function pick(box) {
+    if (revealed) return;
+    revealed = true;
+    const winningName = pickWeighted();
+    const remainingPrimary = primaryNames.find(n => n !== winningName);
+    const shuffledOthers = [...otherNames, remainingPrimary].sort(() => Math.random() - 0.5);
+    let idx = 0;
+    document.querySelectorAll('.box').forEach(b => {
+      b.classList.add('revealed');
+      if (b === box) {
+        b.textContent = winningName;
+      } else {
+        b.textContent = shuffledOthers[idx++];
+        b.classList.add('locked');
+      }
+    });
+    status.textContent = winningName + " has been selected!";
+    launchConfetti();
+  }
+
+  shuffleBtn.addEventListener('click', () => {
+    revealed = false;
+    status.textContent = 'Shuffled. Pick a box.';
+    render();
+    const boxes = Array.from(grid.children);
+    boxes.sort(() => Math.random() - 0.5).forEach(b => grid.appendChild(b));
+  });
+
+  resetBtn.addEventListener('click', () => {
+    revealed = false;
+    status.textContent = 'Shuffle, then pick a box.';
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
